@@ -1,0 +1,38 @@
+services:
+  app:
+    build: .
+    container_name: nextpropconnect-app
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3015:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:9SI1P68dxVQPHFDNUGxzSK77pCFKwkEQ@supabase-db:5432/propconnect
+      - AUTH_SECRET=WEuiqTPybSi991cDRh2HPE/yonL7eltPlKXS5aNV+Z0=
+      - AUTH_TRUST_HOST=true
+      - NEXTAUTH_URL=https://nextpropconnect.itedia.co.za
+      # MsgHub Configuration (centralized messaging)
+      - MSGHUB_URL=https://messaging.itedia.co.za
+      - MSGHUB_API_KEY=mh_gGswkMdesqHOcIC7Y-qERhF2EVM0CMiPqXnXTdMXsWI
+      - MSGHUB_TENANT_ID=1c01d2ea-782a-4b36-b83a-1d116e3d8e77
+      - MSGHUB_WEBHOOK_SECRET=wx3CEKnzUZ4Xq6AFXSPQNOl0f4E8w3Mg
+      # Email Configuration (SMTP)
+      - SMTP_HOST=mail.itedia.co.za
+      - SMTP_PORT=587
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - EMAIL_FROM=NextPropConnect <noreply@nextpropconnect.itedia.co.za>
+    networks:
+      - travelinn-edge
+      - travelinn-network
+      - supabase_supabase-internal
+
+networks:
+  travelinn-edge:
+    external: true
+  travelinn-network:
+    external: true
+  supabase_supabase-internal:
+    external: true
