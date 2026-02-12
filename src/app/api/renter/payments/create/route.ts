@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { query } from "@/lib/db";
+import { createPaymentUrl, isOzowConfigured } from "@/lib/ozow";
 import crypto from "crypto";
+
+const BASE_URL = process.env.NEXTAUTH_URL || "https://nextpropconnect.co.za";
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,67 +39,53 @@ export async function POST(request: NextRequest) {
     const tenant = tenantResult.rows[0];
 
     // Generate unique transaction reference
-    const transactionRef = `PC-${tenant.id}-${Date.now()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+    const transactionRef = `PC-RENT-${tenant.id}-${Date.now()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 
     // Create payment record
     const paymentResult = await query(
-      `INSERT INTO rent_payments (tenant_id, amount, due_date, status, payment_reference, notes)
-       VALUES ($1, $2, CURRENT_DATE, 'pending', $3, $4)
+      `INSERT INTO rent_payments (tenant_id, property_id, amount, due_date, status, payment_reference, notes)
+       VALUES ($1, $2, $3, CURRENT_DATE, 'pending', $4, $5)
        RETURNING id`,
-      [tenant.id, amount, transactionRef, description || `${payment_type} payment`]
+      [tenant.id, tenant.property_id, amount, transactionRef, description || `${payment_type} payment`]
     );
 
     const paymentId = paymentResult.rows[0].id;
 
-    // Generate Ozow payment URL
-    const siteCode = process.env.OZOW_SITE_CODE;
-    const privateKey = process.env.OZOW_PRIVATE_KEY;
-    const apiKey = process.env.OZOW_API_KEY;
-    const isTest = process.env.OZOW_TEST_MODE === "true";
-
-    if (!siteCode || !privateKey) {
-      // Fallback for development
-      return NextResponse.json({ 
-        error: "Payment gateway not configured",
-        paymentId 
-      }, { status: 500 });
+    // Check if Ozow is configured
+    if (!isOzowConfigured()) {
+      console.log("[Rent Payment] Ozow not configured, using demo mode");
+      
+      // Demo mode - mark as pending and return a mock URL
+      return NextResponse.json({
+        demo: true,
+        paymentId,
+        message: "Demo mode: Payment gateway not configured",
+        redirectUrl: `${BASE_URL}/renter/payments/success?ref=${transactionRef}&demo=true`,
+      });
     }
 
-    const countryCode = "ZA";
-    const currencyCode = "ZAR";
-    const amountStr = amount.toFixed(2);
-    const successUrl = `${process.env.NEXTAUTH_URL}/renter/payments/success?ref=${transactionRef}`;
-    const errorUrl = `${process.env.NEXTAUTH_URL}/renter/payments/error?ref=${transactionRef}`;
-    const cancelUrl = `${process.env.NEXTAUTH_URL}/renter/payments?cancelled=true`;
-    const notifyUrl = `${process.env.NEXTAUTH_URL}/api/payments/ozow-notify`;
-
-    // Generate hash
-    const hashInput = `${siteCode}${countryCode}${currencyCode}${amountStr}${transactionRef}${user.email || ''}PropConnect Rent Payment${successUrl}${errorUrl}${cancelUrl}${notifyUrl}${isTest}${privateKey}`;
-    const hashCheck = crypto.createHash("sha512").update(hashInput.toLowerCase()).digest("hex");
-
-    // Build Ozow URL
-    const params = new URLSearchParams({
-      SiteCode: siteCode,
-      CountryCode: countryCode,
-      CurrencyCode: currencyCode,
-      Amount: amountStr,
-      TransactionReference: transactionRef,
-      BankReference: `PropConnect-${tenant.property_id}`,
-      Customer: user.email || "",
-      Optional1: paymentId.toString(),
-      Optional2: tenant.id.toString(),
-      Optional3: payment_type || "rent",
-      SuccessUrl: successUrl,
-      ErrorUrl: errorUrl,
-      CancelUrl: cancelUrl,
-      NotifyUrl: notifyUrl,
-      IsTest: isTest.toString(),
-      HashCheck: hashCheck,
+    // Create Ozow payment URL
+    // Note: amount is in Rands, createPaymentUrl expects cents
+    const amountInCents = Math.round(amount * 100);
+    
+    const paymentUrl = createPaymentUrl({
+      transactionReference: transactionRef,
+      amount: amountInCents,
+      bankReference: `PropConnect-${tenant.property_id}`.substring(0, 20),
+      customer: user.email || undefined,
+      cancelUrl: `${BASE_URL}/renter/payments?cancelled=true`,
+      errorUrl: `${BASE_URL}/renter/payments/error?ref=${transactionRef}`,
+      successUrl: `${BASE_URL}/renter/payments/success?ref=${transactionRef}`,
+      notifyUrl: `${BASE_URL}/api/payments/webhook`,
     });
 
-    const redirectUrl = `https://pay.ozow.com/?${params.toString()}`;
+    console.log(`[Rent Payment] Created payment ${paymentId} for tenant ${tenant.id}, amount: R${amount}`);
 
-    return NextResponse.json({ redirectUrl, paymentId, transactionRef });
+    return NextResponse.json({ 
+      redirectUrl: paymentUrl, 
+      paymentId, 
+      transactionRef 
+    });
   } catch (error) {
     console.error("Error creating payment:", error);
     return NextResponse.json({ error: "Failed to create payment" }, { status: 500 });
