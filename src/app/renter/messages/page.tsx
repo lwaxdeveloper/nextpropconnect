@@ -34,13 +34,13 @@ export default async function RenterMessagesPage() {
          u.name as other_user_name, u.avatar_url as other_user_avatar,
          p.title as property_title,
          (SELECT content FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message,
-         (SELECT created_at FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_at,
+         (SELECT created_at FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as msg_time,
          (SELECT COUNT(*)::int FROM messages WHERE conversation_id = c.id AND sender_id != $1 AND is_read = false) as unread_count
        FROM conversations c
        JOIN users u ON u.id = CASE WHEN c.buyer_id = $1 THEN c.seller_id ELSE c.buyer_id END
        LEFT JOIN properties p ON c.property_id = p.id
        WHERE c.buyer_id = $1 OR c.seller_id = $1
-       ORDER BY last_message_at DESC NULLS LAST`,
+       ORDER BY c.last_message_at DESC NULLS LAST`,
       [userId]
     );
     conversations = conversationsResult.rows;
@@ -106,9 +106,9 @@ export default async function RenterMessagesPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <p className="font-semibold truncate">{conv.other_user_name}</p>
-                      {conv.last_message_at && (
+                      {(conv.msg_time || conv.last_message_at) && (
                         <span className="text-xs text-gray-400">
-                          {formatTimeAgo(new Date(conv.last_message_at))}
+                          {formatTimeAgo(new Date(conv.msg_time || conv.last_message_at))}
                         </span>
                       )}
                     </div>
