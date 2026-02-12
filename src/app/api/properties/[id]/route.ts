@@ -195,6 +195,71 @@ export async function PUT(
   }
 }
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const propertyId = parseInt(id);
+    const user = session.user as { id?: string };
+    const userId = parseInt(user.id || "0");
+
+    // Check ownership
+    const existing = await query(
+      "SELECT user_id FROM properties WHERE id = $1",
+      [propertyId]
+    );
+    if (existing.rows.length === 0) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    if (existing.rows[0].user_id !== userId) {
+      return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const updates: string[] = [];
+    const values: (string | number | boolean | null)[] = [];
+    let paramCount = 0;
+
+    // Allow partial updates for specific fields
+    const allowedFields = [
+      'status', 'is_featured', 'price', 'title', 'description',
+      'bedrooms', 'bathrooms', 'garages', 'parking_spaces'
+    ];
+
+    for (const field of allowedFields) {
+      if (body[field] !== undefined) {
+        updates.push(`${field} = $${++paramCount}`);
+        values.push(body[field]);
+      }
+    }
+
+    if (updates.length === 0) {
+      return NextResponse.json({ error: "No fields to update" }, { status: 400 });
+    }
+
+    values.push(propertyId);
+    await query(
+      `UPDATE properties SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $${paramCount + 1}`,
+      values
+    );
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("PATCH /api/properties/[id] error:", err);
+    return NextResponse.json(
+      { error: "Failed to update property" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

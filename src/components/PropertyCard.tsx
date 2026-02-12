@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { formatPrice } from "./PriceDisplay";
+import SavePropertyButton from "./SavePropertyButton";
 
 export interface PropertyCardData {
   id: number;
@@ -21,6 +22,7 @@ export interface PropertyCardData {
   is_featured: boolean;
   is_verified?: boolean;
   agent_name?: string;
+  is_saved?: boolean;
 }
 
 export default function PropertyCard({ property }: { property: PropertyCardData }) {
@@ -38,12 +40,11 @@ export default function PropertyCard({ property }: { property: PropertyCardData 
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-              <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 22V12h6v10" />
-              </svg>
-            </div>
+            <img
+              src={`/images/property-placeholder-${(p.id % 3) + 1}.jpg`}
+              alt={p.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            />
           )}
 
           {/* Badges */}
@@ -73,6 +74,11 @@ export default function PropertyCard({ property }: { property: PropertyCardData 
                 Featured
               </span>
             )}
+          </div>
+
+          {/* Save button */}
+          <div className="absolute top-3 right-3">
+            <SavePropertyButton propertyId={p.id} initialSaved={p.is_saved} />
           </div>
 
           {/* Property type pill */}

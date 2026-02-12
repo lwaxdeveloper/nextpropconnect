@@ -1,284 +1,266 @@
-/**
- * Email Service using Nodemailer
- * 
- * Sends transactional emails for:
- * - New message notifications
- * - Viewing confirmations
- * - Property alerts
- */
+import nodemailer from 'nodemailer';
 
-import nodemailer from "nodemailer";
+// Check if email is configured
+export function isEmailConfigured(): boolean {
+  return !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+}
 
-// Configuration
-const SMTP_HOST = process.env.SMTP_HOST || "mail.itedia.co.za";
-const SMTP_PORT = parseInt(process.env.SMTP_PORT || "587");
-const SMTP_USER = process.env.SMTP_USER || "";
-const SMTP_PASS = process.env.SMTP_PASS || "";
-const EMAIL_FROM = process.env.EMAIL_FROM || "NextPropConnect <noreply@nextnextpropconnect.co.za>";
-
-// Create reusable transporter
 const transporter = nodemailer.createTransport({
-  host: SMTP_HOST,
-  port: SMTP_PORT,
-  secure: SMTP_PORT === 465,
+  host: process.env.SMTP_HOST,
+  port: parseInt(process.env.SMTP_PORT || '587'),
+  secure: false,
   auth: {
-    user: SMTP_USER,
-    pass: SMTP_PASS,
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
   },
 });
 
-export function isEmailConfigured(): boolean {
-  return !!(SMTP_USER && SMTP_PASS);
-}
-
-interface SendEmailOptions {
+interface EmailOptions {
   to: string;
   subject: string;
   html: string;
   text?: string;
 }
 
-export async function sendEmail({ to, subject, html, text }: SendEmailOptions): Promise<boolean> {
-  if (!isEmailConfigured()) {
-    console.log("[Email] Not configured, skipping send to:", to);
-    return false;
-  }
-
+export async function sendEmail({ to, subject, html, text }: EmailOptions): Promise<boolean> {
   try {
     await transporter.sendMail({
-      from: EMAIL_FROM,
+      from: process.env.SMTP_FROM || 'NextPropConnect <noreply@nextpropconnect.co.za>',
       to,
       subject,
       html,
-      text: text || html.replace(/<[^>]*>/g, ""),
+      text,
     });
-    console.log("[Email] Sent to:", to, "Subject:", subject);
+    console.log(`[Email] Sent to ${to}: ${subject}`);
     return true;
   } catch (error) {
-    console.error("[Email] Failed to send:", error);
+    console.error(`[Email] Failed to send to ${to}:`, error);
     return false;
   }
 }
 
-/**
- * Send new message notification
- */
+export async function sendVerificationEmail(email: string, code: string): Promise<boolean> {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #E11D48 0%, #BE123C 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+        .code { font-size: 32px; font-weight: bold; color: #E11D48; letter-spacing: 8px; text-align: center; padding: 20px; background: white; border-radius: 8px; margin: 20px 0; }
+        .footer { text-align: center; color: #666; font-size: 12px; margin-top: 20px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>NextPropConnect</h1>
+          <p>Verify Your Email</p>
+        </div>
+        <div class="content">
+          <p>Hi there!</p>
+          <p>Thanks for signing up with NextPropConnect. Use this code to verify your email:</p>
+          <div class="code">${code}</div>
+          <p>This code expires in <strong>15 minutes</strong>.</p>
+          <p>If you didn't create an account, you can safely ignore this email.</p>
+        </div>
+        <div class="footer">
+          <p>© 2026 NextPropConnect SA | iTedia (Pty) Ltd</p>
+          <p>South Africa's Property Platform</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `${code} is your NextPropConnect verification code`,
+    html,
+  });
+}
+
+export async function sendWelcomeEmail(email: string, name: string): Promise<boolean> {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #E11D48 0%, #BE123C 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+        .button { display: inline-block; background: #E11D48; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+        .footer { text-align: center; color: #666; font-size: 12px; margin-top: 20px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Welcome to NextPropConnect! 🎉</h1>
+        </div>
+        <div class="content">
+          <p>Hi ${name}!</p>
+          <p>Welcome to NextPropConnect SA — South Africa's modern property platform.</p>
+          <p><strong>Your 90-day free trial has started!</strong> You have full access to all features:</p>
+          <ul>
+            <li>✅ List up to 20 properties</li>
+            <li>✅ Upload 30 photos per listing</li>
+            <li>✅ Analytics & insights</li>
+            <li>✅ WhatsApp notifications</li>
+            <li>✅ Priority support</li>
+          </ul>
+          <p style="text-align: center;">
+            <a href="https://nextpropconnect.co.za/dashboard" class="button">Go to Dashboard</a>
+          </p>
+          <p>Need help? Just reply to this email or use the feedback button in the app.</p>
+        </div>
+        <div class="footer">
+          <p>© 2026 NextPropConnect SA | iTedia (Pty) Ltd</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `Welcome to NextPropConnect, ${name}! 🏠`,
+    html,
+  });
+}
+
+// Send email when a new message is received
 export async function sendNewMessageEmail(
-  toEmail: string,
-  toName: string,
-  senderName: string,
+  to: string,
+  recipientName: string,
+  senderName: string, 
   messagePreview: string,
   propertyTitle: string | null,
   conversationUrl: string
 ): Promise<boolean> {
-  const subject = `New message from ${senderName}${propertyTitle ? ` about ${propertyTitle}` : ""}`;
-  
+  const aboutText = propertyTitle ? ` about <strong>${propertyTitle}</strong>` : '';
   const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: #0066FF; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
-        .content { background: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px; }
-        .message-box { background: white; padding: 15px; border-left: 4px solid #0066FF; margin: 15px 0; border-radius: 4px; }
-        .button { display: inline-block; background: #0066FF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px; }
-        .footer { text-align: center; color: #666; font-size: 12px; margin-top: 20px; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h2 style="margin:0;">📬 New Message</h2>
-        </div>
-        <div class="content">
-          <p>Hi ${toName},</p>
-          <p><strong>${senderName}</strong> sent you a message${propertyTitle ? ` about <strong>${propertyTitle}</strong>` : ""}:</p>
-          <div class="message-box">
-            "${messagePreview.substring(0, 200)}${messagePreview.length > 200 ? "..." : ""}"
-          </div>
-          <a href="${conversationUrl}" class="button">Reply Now</a>
-        </div>
-        <div class="footer">
-          <p>NextPropConnect SA | <a href="https://nextnextpropconnect.co.za">nextnextpropconnect.co.za</a></p>
-        </div>
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #E11D48;">New Message on NextPropConnect</h2>
+      <p>Hi ${recipientName},</p>
+      <p><strong>${senderName}</strong> sent you a message${aboutText}:</p>
+      <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 0; color: #333;">"${messagePreview}"</p>
       </div>
-    </body>
-    </html>
+      <a href="${conversationUrl}" style="display: inline-block; background: #E11D48; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">View Conversation</a>
+    </div>
   `;
-
-  return sendEmail({ to: toEmail, subject, html });
+  
+  const subject = propertyTitle 
+    ? `New message from ${senderName} about ${propertyTitle}`
+    : `New message from ${senderName}`;
+  
+  return sendEmail({
+    to,
+    subject,
+    html,
+  });
 }
 
-/**
- * Send viewing request notification to agent/seller
- */
-export async function sendViewingRequestEmail(
-  toEmail: string,
-  toName: string,
-  buyerName: string,
-  propertyTitle: string,
-  proposedDate: string,
-  proposedTime: string,
-  notes: string | null,
-  dashboardUrl: string
+// Send email for WhatsApp leads
+export async function sendWhatsAppLeadEmail(
+  to: string,
+  agentName: string,
+  customerPhone: string,
+  messageContent: string,
+  propertyTitle: string | null,
+  conversationUrl: string
 ): Promise<boolean> {
-  const subject = `Viewing Request: ${propertyTitle}`;
-  
+  const titleText = propertyTitle || 'a property';
   const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: #10B981; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
-        .content { background: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px; }
-        .details { background: white; padding: 15px; margin: 15px 0; border-radius: 8px; }
-        .detail-row { display: flex; margin: 8px 0; }
-        .label { font-weight: 600; width: 120px; }
-        .button { display: inline-block; background: #10B981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px; }
-        .footer { text-align: center; color: #666; font-size: 12px; margin-top: 20px; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h2 style="margin:0;">📅 Viewing Request</h2>
-        </div>
-        <div class="content">
-          <p>Hi ${toName},</p>
-          <p><strong>${buyerName}</strong> wants to view your property!</p>
-          <div class="details">
-            <div class="detail-row"><span class="label">Property:</span> ${propertyTitle}</div>
-            <div class="detail-row"><span class="label">Date:</span> ${proposedDate}</div>
-            <div class="detail-row"><span class="label">Time:</span> ${proposedTime}</div>
-            ${notes ? `<div class="detail-row"><span class="label">Notes:</span> ${notes}</div>` : ""}
-          </div>
-          <a href="${dashboardUrl}" class="button">Respond to Request</a>
-        </div>
-        <div class="footer">
-          <p>NextPropConnect SA | <a href="https://nextnextpropconnect.co.za">nextnextpropconnect.co.za</a></p>
-        </div>
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #25D366;">New WhatsApp Lead!</h2>
+      <p>Hi ${agentName},</p>
+      <p>You received a new inquiry via WhatsApp:</p>
+      <ul>
+        <li><strong>Phone:</strong> ${customerPhone}</li>
+        ${propertyTitle ? `<li><strong>Property:</strong> ${propertyTitle}</li>` : ''}
+      </ul>
+      <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 0;">${messageContent}</p>
       </div>
-    </body>
-    </html>
+      <a href="${conversationUrl}" style="display: inline-block; background: #E11D48; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">View Conversation</a>
+    </div>
   `;
-
-  return sendEmail({ to: toEmail, subject, html });
+  
+  return sendEmail({
+    to,
+    subject: `WhatsApp Lead${propertyTitle ? ` for ${propertyTitle}` : ''}`,
+    html,
+  });
 }
 
-/**
- * Send property alert notification
- */
+// Send email for viewing requests
+export async function sendViewingRequestEmail(
+  to: string,
+  recipientName: string,
+  senderName: string,
+  propertyTitle: string,
+  requestedDate: string,
+  requestedTime: string,
+  notes: string | null,
+  conversationUrl: string
+): Promise<boolean> {
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #E11D48;">New Viewing Request</h2>
+      <p>Hi ${recipientName},</p>
+      <p><strong>${senderName}</strong> wants to view <strong>${propertyTitle}</strong>:</p>
+      <ul>
+        <li><strong>Date:</strong> ${requestedDate}</li>
+        <li><strong>Time:</strong> ${requestedTime}</li>
+      </ul>
+      ${notes ? `<p><strong>Notes:</strong> ${notes}</p>` : ''}
+      <a href="${conversationUrl}" style="display: inline-block; background: #E11D48; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Respond to Request</a>
+    </div>
+  `;
+  
+  return sendEmail({
+    to,
+    subject: `Viewing Request: ${senderName} for ${propertyTitle}`,
+    html,
+  });
+}
+
+// Send property alert email
 export async function sendPropertyAlertEmail(
-  toEmail: string,
-  toName: string,
-  properties: Array<{
-    id: number;
-    title: string;
-    price: string;
-    location: string;
-    imageUrl: string | null;
-  }>,
+  to: string,
+  userName: string,
+  properties: Array<{ id: number; title: string; price: string; location: string; imageUrl?: string | null }>,
   alertName: string
 ): Promise<boolean> {
-  const subject = `🏠 ${properties.length} new ${properties.length === 1 ? "property matches" : "properties match"} your alert: ${alertName}`;
-  
   const propertyCards = properties.map(p => `
-    <div style="background: white; padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #eee;">
-      ${p.imageUrl ? `<img src="${p.imageUrl}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 6px;" />` : ""}
-      <h3 style="margin: 10px 0 5px;">${p.title}</h3>
-      <p style="color: #0066FF; font-size: 18px; font-weight: bold; margin: 5px 0;">${p.price}</p>
-      <p style="color: #666; margin: 5px 0;">📍 ${p.location}</p>
-      <a href="https://nextnextpropconnect.co.za/properties/${p.id}" style="color: #0066FF; text-decoration: none;">View Property →</a>
+    <div style="border: 1px solid #eee; border-radius: 8px; padding: 15px; margin: 10px 0;">
+      <h3 style="margin: 0 0 10px 0;">${p.title}</h3>
+      <p style="color: #E11D48; font-weight: bold; margin: 5px 0;">${p.price}</p>
+      <p style="color: #666; margin: 5px 0;">${p.location}</p>
+      <a href="https://nextpropconnect.co.za/properties/${p.id}" style="color: #E11D48;">View Property →</a>
     </div>
-  `).join("");
+  `).join('');
 
   const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: #0066FF; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
-        .content { background: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px; }
-        .footer { text-align: center; color: #666; font-size: 12px; margin-top: 20px; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h2 style="margin:0;">🔔 Property Alert: ${alertName}</h2>
-        </div>
-        <div class="content">
-          <p>Hi ${toName},</p>
-          <p>Great news! We found ${properties.length} new ${properties.length === 1 ? "property" : "properties"} matching your search:</p>
-          ${propertyCards}
-          <p style="margin-top: 20px;">
-            <a href="https://nextnextpropconnect.co.za/alerts" style="color: #666;">Manage your alerts</a>
-          </p>
-        </div>
-        <div class="footer">
-          <p>NextPropConnect SA | <a href="https://nextnextpropconnect.co.za">nextnextpropconnect.co.za</a></p>
-        </div>
-      </div>
-    </body>
-    </html>
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #E11D48;">New Properties Matching "${alertName}"</h2>
+      <p>Hi ${userName},</p>
+      <p>We found ${properties.length} new ${properties.length === 1 ? 'property' : 'properties'} matching your alert:</p>
+      ${propertyCards}
+      <p style="margin-top: 20px;">
+        <a href="https://nextpropconnect.co.za/dashboard/alerts" style="color: #666; font-size: 12px;">Manage your alerts</a>
+      </p>
+    </div>
   `;
-
-  return sendEmail({ to: toEmail, subject, html });
-}
-
-/**
- * Send WhatsApp inquiry notification to agent
- */
-export async function sendWhatsAppLeadEmail(
-  toEmail: string,
-  toName: string,
-  customerPhone: string,
-  messagePreview: string,
-  propertyTitle: string | null,
-  conversationUrl: string
-): Promise<boolean> {
-  const subject = `📲 New WhatsApp Lead${propertyTitle ? `: ${propertyTitle}` : ""}`;
   
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: #25D366; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
-        .content { background: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px; }
-        .message-box { background: white; padding: 15px; border-left: 4px solid #25D366; margin: 15px 0; border-radius: 4px; }
-        .button { display: inline-block; background: #25D366; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px; }
-        .footer { text-align: center; color: #666; font-size: 12px; margin-top: 20px; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h2 style="margin:0;">📲 New WhatsApp Lead</h2>
-        </div>
-        <div class="content">
-          <p>Hi ${toName},</p>
-          <p>You have a new WhatsApp inquiry from <strong>+${customerPhone}</strong>${propertyTitle ? ` about <strong>${propertyTitle}</strong>` : ""}:</p>
-          <div class="message-box">
-            "${messagePreview.substring(0, 200)}${messagePreview.length > 200 ? "..." : ""}"
-          </div>
-          <a href="${conversationUrl}" class="button">Reply Now</a>
-        </div>
-        <div class="footer">
-          <p>NextPropConnect SA | <a href="https://nextnextpropconnect.co.za">nextnextpropconnect.co.za</a></p>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
-
-  return sendEmail({ to: toEmail, subject, html });
+  return sendEmail({
+    to,
+    subject: `${properties.length} new ${properties.length === 1 ? 'property' : 'properties'} matching "${alertName}"`,
+    html,
+  });
 }

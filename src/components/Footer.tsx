@@ -82,9 +82,9 @@ export default function Footer() {
         <div className="border-t border-background/10 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-muted-foreground">
           <p>© {new Date().getFullYear()} NextPropConnect SA. All rights reserved.</p>
           <div className="flex gap-6">
-            <a href="#" className="hover:text-background transition">Terms of Service</a>
-            <a href="#" className="hover:text-background transition">Privacy Policy</a>
-            <a href="#" className="hover:text-background transition">POPIA</a>
+            <Link href="/terms" className="hover:text-background transition">Terms of Service</Link>
+            <Link href="/privacy" className="hover:text-background transition">Privacy Policy</Link>
+            <Link href="/privacy#popia" className="hover:text-background transition">POPIA</Link>
           </div>
         </div>
       </div>

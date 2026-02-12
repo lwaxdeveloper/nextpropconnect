@@ -14,8 +14,8 @@ export default async function FlyerPage() {
     `SELECT p.id, p.title, p.price, p.bedrooms, p.bathrooms, p.suburb, p.city, 
             p.property_type, p.listing_type, p.floor_size, p.erf_size,
             p.has_pool, p.has_garden, p.has_security, p.description,
-       (SELECT pi.url FROM property_images pi WHERE pi.property_id = p.id ORDER BY pi.is_primary DESC LIMIT 1) as image_url,
-       (SELECT ARRAY_AGG(pi.url) FROM property_images pi WHERE pi.property_id = p.id ORDER BY pi.is_primary DESC LIMIT 4) as images
+       (SELECT pi.url FROM property_images pi WHERE pi.property_id = p.id ORDER BY pi.is_primary DESC, pi.id LIMIT 1) as image_url,
+       (SELECT ARRAY_AGG(sub.url) FROM (SELECT url FROM property_images WHERE property_id = p.id ORDER BY is_primary DESC, id LIMIT 4) sub) as images
      FROM properties p
      WHERE p.user_id = $1 AND p.status = 'active'
      ORDER BY p.created_at DESC

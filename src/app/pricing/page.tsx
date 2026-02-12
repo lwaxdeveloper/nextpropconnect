@@ -1,7 +1,10 @@
 import { auth } from "@/lib/auth";
+import { query } from "@/lib/db";
 import { SUBSCRIPTION_PLANS } from "@/lib/ozow";
 import Link from "next/link";
 import { Check } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Pricing — NextPropConnect SA",
@@ -15,6 +18,18 @@ function formatPrice(cents: number): string {
 export default async function PricingPage() {
   const session = await auth();
   const isLoggedIn = !!session?.user;
+  let currentPlan = "free";
+  
+  if (isLoggedIn) {
+    const userId = parseInt((session.user as { id?: string }).id || "0");
+    const subResult = await query(
+      `SELECT plan FROM subscriptions WHERE user_id = $1 AND status = 'active' LIMIT 1`,
+      [userId]
+    );
+    if (subResult.rows.length > 0) {
+      currentPlan = subResult.rows[0].plan;
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -74,18 +89,22 @@ export default async function PricingPage() {
                 </ul>
 
                 {isLoggedIn ? (
-                  <Link
-                    href={plan.price === 0 ? "/agent" : `/subscribe/${key}`}
-                    className={`block w-full py-3 rounded-xl font-semibold text-center transition ${
-                      isPopular
-                        ? "bg-primary text-white hover:bg-primary/90"
-                        : plan.price === 0
-                        ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                        : "bg-dark text-white hover:bg-dark/90"
-                    }`}
-                  >
-                    {plan.price === 0 ? "Current Plan" : "Get Started"}
-                  </Link>
+                  key === currentPlan ? (
+                    <div className="block w-full py-3 rounded-xl font-semibold text-center bg-gray-100 text-gray-500">
+                      ✓ Current Plan
+                    </div>
+                  ) : (
+                    <Link
+                      href={`/subscribe/${key}`}
+                      className={`block w-full py-3 rounded-xl font-semibold text-center transition ${
+                        isPopular
+                          ? "bg-primary text-white hover:bg-primary/90"
+                          : "bg-dark text-white hover:bg-dark/90"
+                      }`}
+                    >
+                      {key === "free" ? "Downgrade" : "Upgrade Now"}
+                    </Link>
+                  )
                 ) : (
                   <Link
                     href="/register"

@@ -1,0 +1,14 @@
+# NextPropConnect SA - robots.txt
+User-agent: *
+Allow: /
+
+# Disallow admin and private areas
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /api/
+Disallow: /agent/
+Disallow: /messages/
+Disallow: /notifications/
+
+# Allow search engines to find the sitemap
+Sitemap: https://nextpropconnect.co.za/sitemap.xml

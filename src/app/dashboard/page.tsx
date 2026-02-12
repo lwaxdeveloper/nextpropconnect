@@ -10,11 +10,13 @@ export const dynamic = "force-dynamic";
 
 const navItems = [
   { icon: "📊", label: "Dashboard", href: "/dashboard", active: true },
-  { icon: "🏠", label: "Properties", href: "/properties" },
-  { icon: "➕", label: "Create Listing", href: "/properties/new" },
+  { icon: "🏠", label: "My Properties", href: "/dashboard/properties" },
+  { icon: "➕", label: "List Property", href: "/properties/new" },
+  { icon: "👥", label: "Tenants", href: "/dashboard/tenants" },
   { icon: "💬", label: "Messages", href: "/messages" },
   { icon: "🔔", label: "Notifications", href: "/notifications" },
-  { icon: "👤", label: "Profile", href: "#", soon: true },
+  { icon: "🔍", label: "Browse Properties", href: "/properties" },
+  { icon: "👤", label: "Profile", href: "/profile" },
 ];
 
 async function SignOutButton() {
@@ -41,7 +43,22 @@ export default async function DashboardPage() {
   if (!session?.user) redirect("/login");
 
   const user = session.user as { name?: string | null; email?: string | null; role?: string; id?: string };
+  
+  // Redirect agents to the full CRM dashboard
+  if (user.role === "agent") {
+    redirect("/agent");
+  }
+  
   const userId = parseInt(user.id || "0");
+
+  // Check if user is a tenant - redirect to renter dashboard
+  const tenantCheck = await query(
+    `SELECT id FROM tenants WHERE user_id = $1 AND status = 'active' LIMIT 1`,
+    [userId]
+  );
+  if (tenantCheck.rows.length > 0) {
+    redirect("/renter");
+  }
 
   // Fetch user's listings
   const listingsResult = await query(
@@ -117,11 +134,6 @@ export default async function DashboardPage() {
             >
               <span>{item.icon}</span>
               {item.label}
-              {item.soon && (
-                <span className="ml-auto text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">
-                  Soon
-                </span>
-              )}
             </Link>
           ))}
         </nav>

@@ -41,32 +41,36 @@ export async function POST(request: NextRequest) {
   }
   const userId = parseInt((session.user as { id?: string }).id || "0");
   const body = await request.json();
-  const { property_id, seller_id } = body;
+  const { property_id, seller_id, recipient_id } = body;
+  
+  // Accept either seller_id or recipient_id
+  const recipientUserId = seller_id || recipient_id;
 
-  if (!seller_id) {
-    return NextResponse.json({ error: "seller_id is required" }, { status: 400 });
+  if (!recipientUserId) {
+    return NextResponse.json({ error: "seller_id or recipient_id is required" }, { status: 400 });
   }
 
-  if (userId === seller_id) {
+  if (userId === recipientUserId) {
     return NextResponse.json({ error: "Cannot message yourself" }, { status: 400 });
   }
 
-  // Check for existing conversation
+  // Check for existing conversation (either direction)
   const existing = await query(
     `SELECT id FROM conversations 
-     WHERE property_id ${property_id ? '= $1' : 'IS NULL'} AND buyer_id = $2 AND seller_id = $3`,
-    property_id ? [property_id, userId, seller_id] : [userId, seller_id]
+     WHERE property_id ${property_id ? '= $1' : 'IS NULL'} 
+     AND ((buyer_id = $2 AND seller_id = $3) OR (buyer_id = $3 AND seller_id = $2))`,
+    property_id ? [property_id, userId, recipientUserId] : [userId, recipientUserId]
   );
 
   if (existing.rows.length > 0) {
-    return NextResponse.json({ id: existing.rows[0].id, existing: true });
+    return NextResponse.json({ conversation_id: existing.rows[0].id, existing: true });
   }
 
   // Create new conversation
   const result = await query(
     `INSERT INTO conversations (property_id, buyer_id, seller_id) VALUES ($1, $2, $3) RETURNING id`,
-    [property_id || null, userId, seller_id]
+    [property_id || null, userId, recipientUserId]
   );
 
-  return NextResponse.json({ id: result.rows[0].id, existing: false }, { status: 201 });
+  return NextResponse.json({ conversation_id: result.rows[0].id, existing: false }, { status: 201 });
 }

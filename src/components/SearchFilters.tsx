@@ -96,7 +96,10 @@ export default function SearchFilters() {
             <button
               key={opt.value}
               type="button"
-              onClick={() => set("listing_type", opt.value)}
+              onClick={() => {
+                set("listing_type", opt.value);
+                apply({ listing_type: opt.value });
+              }}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
                 filters.listing_type === opt.value
                   ? "bg-primary text-white"
@@ -115,25 +118,26 @@ export default function SearchFilters() {
           Property Type
         </label>
         <div className="flex flex-wrap gap-2">
-          {PROPERTY_TYPES.map((pt) => (
-            <button
-              key={pt}
-              type="button"
-              onClick={() =>
-                set(
-                  "property_type",
-                  filters.property_type === pt.toLowerCase() ? "" : pt.toLowerCase()
-                )
-              }
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                filters.property_type === pt.toLowerCase()
-                  ? "bg-primary text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              {pt}
-            </button>
-          ))}
+          {PROPERTY_TYPES.map((pt) => {
+            const newVal = filters.property_type === pt.toLowerCase() ? "" : pt.toLowerCase();
+            return (
+              <button
+                key={pt}
+                type="button"
+                onClick={() => {
+                  set("property_type", newVal);
+                  apply({ property_type: newVal });
+                }}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                  filters.property_type === pt.toLowerCase()
+                    ? "bg-primary text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {pt}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -171,7 +175,10 @@ export default function SearchFilters() {
             <button
               key={v}
               type="button"
-              onClick={() => set("bedrooms", v)}
+              onClick={() => {
+                set("bedrooms", v);
+                apply({ bedrooms: v });
+              }}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
                 filters.bedrooms === v
                   ? "bg-primary text-white"
@@ -194,7 +201,10 @@ export default function SearchFilters() {
             <button
               key={v}
               type="button"
-              onClick={() => set("bathrooms", v)}
+              onClick={() => {
+                set("bathrooms", v);
+                apply({ bathrooms: v });
+              }}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
                 filters.bathrooms === v
                   ? "bg-primary text-white"

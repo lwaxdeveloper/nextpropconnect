@@ -1,15 +1,22 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Logo from "@/components/Logo";
 
-const navItems = [
+interface AgentInfo {
+  hasAgency: boolean;
+  isAgencyOwner: boolean;
+}
+
+const baseNavItems = [
   { icon: "📊", label: "Overview", href: "/agent" },
-  { icon: "🏠", label: "My Listings", href: "/properties" },
+  { icon: "🏠", label: "My Listings", href: "/agent/properties" },
+  { icon: "🔑", label: "Rentals", href: "/agent/rentals", highlight: true },
   { icon: "👥", label: "Leads", href: "/agent/leads" },
-  { icon: "💬", label: "Messages", href: "/messages" },
-  { icon: "📲", label: "WhatsApp", href: "/agent/conversations", highlight: true },
+  { icon: "💬", label: "Messages", href: "/agent/messages" },
+  { icon: "📲", label: "WhatsApp", href: "/agent/conversations" },
   { icon: "📢", label: "Bulk Message", href: "/agent/bulk-message" },
   { icon: "📈", label: "Analytics", href: "/agent/analytics" },
   { icon: "⭐", label: "Reviews", href: "/agent/reviews" },
@@ -17,13 +24,35 @@ const navItems = [
   { icon: "📱", label: "Social Posts", href: "/agent/social" },
   { icon: "🖼️", label: "Flyers", href: "/agent/flyer" },
   { icon: "⚡", label: "Templates", href: "/agent/templates" },
+];
+
+const agencyNavItems = [
   { icon: "🏢", label: "Team", href: "/agent/team" },
+];
+
+const bottomNavItems = [
   { icon: "💳", label: "Billing", href: "/agent/billing" },
   { icon: "👤", label: "Profile", href: "/agent/profile" },
 ];
 
 export default function AgentSidebar({ onSignOut }: { onSignOut?: () => void }) {
   const pathname = usePathname();
+  const [agentInfo, setAgentInfo] = useState<AgentInfo>({ hasAgency: false, isAgencyOwner: false });
+
+  useEffect(() => {
+    // Fetch agent info to determine if they have a team
+    fetch('/api/agent/info')
+      .then(r => r.ok ? r.json() : { hasAgency: false, isAgencyOwner: false })
+      .then(data => setAgentInfo(data))
+      .catch(() => {});
+  }, []);
+
+  // Build nav items based on permissions
+  const navItems = [
+    ...baseNavItems,
+    ...(agentInfo.isAgencyOwner ? agencyNavItems : []),
+    ...bottomNavItems,
+  ];
 
   return (
     <aside className="w-64 bg-white border-r border-gray-100 min-h-screen p-6 hidden md:flex flex-col">

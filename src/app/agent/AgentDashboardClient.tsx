@@ -86,13 +86,15 @@ export default function AgentDashboardClient({ stats, leads: initialLeads }: Pro
         </div>
 
         {leads.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
-            <div className="text-4xl mb-3">👥</div>
-            <h3 className="font-bold text-dark mb-2">No leads yet</h3>
-            <p className="text-sm text-gray-500 mb-4">Add your first lead to start tracking your pipeline.</p>
+          <div className="bg-white rounded-2xl border-2 border-gray-200 shadow-md p-10 text-center">
+            <div className="w-20 h-20 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <span className="text-4xl">👥</span>
+            </div>
+            <h3 className="font-bold text-dark text-lg mb-2">No leads yet</h3>
+            <p className="text-sm text-gray-500 mb-6">Add your first lead to start tracking your pipeline.</p>
             <button
               onClick={() => setShowAddLead(true)}
-              className="px-6 py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary-dark transition"
+              className="px-8 py-3.5 bg-primary text-white font-bold rounded-xl hover:bg-primary-dark transition shadow-lg shadow-primary/20"
             >
               Add First Lead
             </button>

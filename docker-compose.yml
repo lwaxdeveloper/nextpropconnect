@@ -12,7 +12,16 @@ services:
       - DATABASE_URL=postgresql://postgres:9SI1P68dxVQPHFDNUGxzSK77pCFKwkEQ@supabase-db:5432/propconnect
       - AUTH_SECRET=WEuiqTPybSi991cDRh2HPE/yonL7eltPlKXS5aNV+Z0=
       - AUTH_TRUST_HOST=true
-      - NEXTAUTH_URL=https://nextpropconnect.itedia.co.za
+      - NEXTAUTH_URL=https://nextpropconnect.co.za
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      # Google OAuth
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      # Ozow Payments
+      - OZOW_SITE_CODE=${OZOW_SITE_CODE}
+      - OZOW_PRIVATE_KEY=${OZOW_PRIVATE_KEY}
+      - OZOW_API_KEY=${OZOW_API_KEY}
+      - OZOW_TEST_MODE=${OZOW_TEST_MODE:-false}
       # MsgHub Configuration (centralized messaging)
       - MSGHUB_URL=https://messaging.itedia.co.za
       - MSGHUB_API_KEY=mh_gGswkMdesqHOcIC7Y-qERhF2EVM0CMiPqXnXTdMXsWI
@@ -23,7 +32,9 @@ services:
       - SMTP_PORT=587
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASS=${SMTP_PASS:-}
-      - EMAIL_FROM=NextPropConnect <noreply@nextpropconnect.itedia.co.za>
+      - EMAIL_FROM=NextPropConnect <noreply@nextpropconnect.co.za>
+      # AI Configuration (OpenAI)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
     networks:
       - travelinn-edge
       - travelinn-network

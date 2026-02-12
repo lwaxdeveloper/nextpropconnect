@@ -1,138 +1,170 @@
 import { query } from "./db";
-import { SUBSCRIPTION_PLANS } from "./ozow";
 
-export interface UserSubscription {
-  plan: keyof typeof SUBSCRIPTION_PLANS;
-  status: "active" | "cancelled" | "expired" | "suspended";
-  isTrialing: boolean;
-  trialEndsAt: Date | null;
+export interface SubscriptionStatus {
+  plan: "free" | "trial" | "starter" | "pro" | "agency";
+  isActive: boolean;
+  isTrial: boolean;
+  trialDaysLeft: number | null;
   expiresAt: Date | null;
-  listingsAllowed: number;
-  listingsUsed: number;
-  canCreateListing: boolean;
-  features: readonly string[];
+  features: {
+    maxListings: number;
+    maxPhotos: number;
+    analytics: boolean;
+    bulkMessaging: boolean;
+    teamManagement: boolean;
+    prioritySupport: boolean;
+  };
 }
 
-/**
- * Get subscription status for a user
- */
-export async function getSubscription(userId: number): Promise<UserSubscription> {
-  // Get subscription
-  const subResult = await query(
-    `SELECT plan, status, is_trial, trial_ends_at, expires_at
-     FROM subscriptions 
-     WHERE user_id = $1 
-     ORDER BY created_at DESC 
-     LIMIT 1`,
+const PLAN_FEATURES = {
+  free: {
+    maxListings: 1,
+    maxPhotos: 5,
+    analytics: false,
+    bulkMessaging: false,
+    teamManagement: false,
+    prioritySupport: false,
+  },
+  trial: {
+    // Trial gets Pro features
+    maxListings: 20,
+    maxPhotos: 30,
+    analytics: true,
+    bulkMessaging: true,
+    teamManagement: false,
+    prioritySupport: true,
+  },
+  starter: {
+    maxListings: 5,
+    maxPhotos: 15,
+    analytics: true,
+    bulkMessaging: false,
+    teamManagement: false,
+    prioritySupport: false,
+  },
+  pro: {
+    maxListings: 20,
+    maxPhotos: 30,
+    analytics: true,
+    bulkMessaging: true,
+    teamManagement: false,
+    prioritySupport: true,
+  },
+  agency: {
+    maxListings: 100,
+    maxPhotos: 50,
+    analytics: true,
+    bulkMessaging: true,
+    teamManagement: true,
+    prioritySupport: true,
+  },
+};
+
+// Alias for backward compatibility
+export const getSubscription = getSubscriptionStatus;
+
+export async function getSubscriptionStatus(userId: number): Promise<SubscriptionStatus> {
+  const result = await query(
+    `SELECT subscription_plan, trial_started_at, trial_ends_at, subscription_ends_at 
+     FROM users WHERE id = $1`,
     [userId]
   );
 
-  // Count active listings
-  const listingsResult = await query(
-    `SELECT COUNT(*) as count FROM properties 
-     WHERE (user_id = $1 OR agent_id = $1) AND status = 'active'`,
-    [userId]
-  );
-
-  const listingsUsed = parseInt(listingsResult.rows[0]?.count || "0");
-
-  // Default to free plan
-  if (subResult.rows.length === 0) {
-    const freePlan = SUBSCRIPTION_PLANS.free;
+  if (result.rows.length === 0) {
     return {
       plan: "free",
-      status: "active",
-      isTrialing: false,
-      trialEndsAt: null,
+      isActive: true,
+      isTrial: false,
+      trialDaysLeft: null,
       expiresAt: null,
-      listingsAllowed: freePlan.listings,
-      listingsUsed,
-      canCreateListing: listingsUsed < freePlan.listings,
-      features: freePlan.features,
+      features: PLAN_FEATURES.free,
     };
   }
 
-  const sub = subResult.rows[0];
-  const planKey = (sub.plan as keyof typeof SUBSCRIPTION_PLANS) || "free";
-  const planData = SUBSCRIPTION_PLANS[planKey] || SUBSCRIPTION_PLANS.free;
-
-  // Check if subscription/trial is expired
+  const user = result.rows[0];
   const now = new Date();
-  const expiresAt = sub.expires_at ? new Date(sub.expires_at) : null;
-  const trialEndsAt = sub.trial_ends_at ? new Date(sub.trial_ends_at) : null;
   
-  let status = sub.status as UserSubscription["status"];
-  
-  if (expiresAt && expiresAt < now && status === "active") {
-    status = "expired";
-    // Update in DB
-    await query(
-      `UPDATE subscriptions SET status = 'expired' WHERE user_id = $1 AND status = 'active'`,
-      [userId]
-    );
+  // Check trial status
+  if (user.subscription_plan === "trial" && user.trial_ends_at) {
+    const trialEnds = new Date(user.trial_ends_at);
+    const isTrialActive = trialEnds > now;
+    const trialDaysLeft = isTrialActive 
+      ? Math.ceil((trialEnds.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+      : 0;
+
+    if (isTrialActive) {
+      return {
+        plan: "trial",
+        isActive: true,
+        isTrial: true,
+        trialDaysLeft,
+        expiresAt: trialEnds,
+        features: PLAN_FEATURES.trial,
+      };
+    } else {
+      // Trial expired, fall back to free
+      return {
+        plan: "free",
+        isActive: true,
+        isTrial: false,
+        trialDaysLeft: 0,
+        expiresAt: null,
+        features: PLAN_FEATURES.free,
+      };
+    }
   }
 
-  // If expired or suspended, revert to free plan limits
-  const isActive = status === "active" || status === "cancelled"; // cancelled still has access until expires
-  const effectivePlan = isActive ? planData : SUBSCRIPTION_PLANS.free;
-  const effectiveListings = isActive ? planData.listings : SUBSCRIPTION_PLANS.free.listings;
+  // Check paid subscription
+  if (user.subscription_ends_at) {
+    const subEnds = new Date(user.subscription_ends_at);
+    const isSubActive = subEnds > now;
 
+    if (isSubActive) {
+      const plan = user.subscription_plan as keyof typeof PLAN_FEATURES;
+      return {
+        plan,
+        isActive: true,
+        isTrial: false,
+        trialDaysLeft: null,
+        expiresAt: subEnds,
+        features: PLAN_FEATURES[plan] || PLAN_FEATURES.free,
+      };
+    }
+  }
+
+  // Default to free
   return {
-    plan: isActive ? planKey : "free",
-    status,
-    isTrialing: sub.is_trial && trialEndsAt !== null && trialEndsAt > now,
-    trialEndsAt,
-    expiresAt,
-    listingsAllowed: effectiveListings,
-    listingsUsed,
-    canCreateListing: listingsUsed < effectiveListings,
-    features: effectivePlan.features,
+    plan: "free",
+    isActive: true,
+    isTrial: false,
+    trialDaysLeft: null,
+    expiresAt: null,
+    features: PLAN_FEATURES.free,
   };
 }
 
-/**
- * Check if user can create a new listing
- */
 export async function canCreateListing(userId: number): Promise<{ allowed: boolean; reason?: string }> {
-  const sub = await getSubscription(userId);
+  const status = await getSubscriptionStatus(userId);
   
-  if (sub.canCreateListing) {
-    return { allowed: true };
-  }
+  // Count current listings
+  const countResult = await query(
+    `SELECT COUNT(*) as count FROM properties WHERE user_id = $1 AND status != 'deleted'`,
+    [userId]
+  );
+  const currentCount = parseInt(countResult.rows[0].count);
 
-  if (sub.status === "expired") {
-    return { 
-      allowed: false, 
-      reason: "Your subscription has expired. Please renew to create new listings." 
+  if (currentCount >= status.features.maxListings) {
+    if (status.isTrial) {
+      return {
+        allowed: false,
+        reason: `Trial limit reached (${status.features.maxListings} listings). Upgrade to continue.`,
+      };
+    }
+    return {
+      allowed: false,
+      reason: `Plan limit reached (${status.features.maxListings} listings). Upgrade for more.`,
     };
   }
 
-  if (sub.status === "suspended") {
-    return { 
-      allowed: false, 
-      reason: "Your account is suspended. Please contact support." 
-    };
-  }
-
-  return { 
-    allowed: false, 
-    reason: `You've reached your plan limit of ${sub.listingsAllowed} listing${sub.listingsAllowed !== 1 ? "s" : ""}. Upgrade to list more properties.` 
-  };
-}
-
-/**
- * Check if user has access to a premium feature
- */
-export async function hasFeature(userId: number, feature: string): Promise<boolean> {
-  const sub = await getSubscription(userId);
-  return sub.features.some(f => f.toLowerCase().includes(feature.toLowerCase()));
-}
-
-/**
- * Get days until trial/subscription expires
- */
-export function getDaysRemaining(date: Date | null): number {
-  if (!date) return 0;
-  const now = new Date();
-  return Math.max(0, Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+  return { allowed: true };
 }

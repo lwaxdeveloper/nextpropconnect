@@ -94,15 +94,21 @@ export async function GET(request: NextRequest) {
     );
     const total = parseInt(countResult.rows[0].count);
 
-    // Results with first image
+    // Get session for saved properties check
+    const session = await auth();
+    const currentUserId = session?.user?.id ? parseInt(session.user.id as string) : null;
+
+    // Results with first image and is_saved (parameterized for security)
+    const savedCheckParam = currentUserId ? paramIndex++ : null;
     const result = await query(
       `SELECT p.*, 
-        (SELECT pi.url FROM property_images pi WHERE pi.property_id = p.id ORDER BY pi.is_primary DESC, pi.sort_order ASC LIMIT 1) as image_url
+        (SELECT pi.url FROM property_images pi WHERE pi.property_id = p.id ORDER BY pi.is_primary DESC, pi.sort_order ASC LIMIT 1) as image_url,
+        ${currentUserId ? `EXISTS(SELECT 1 FROM saved_properties sp WHERE sp.property_id = p.id AND sp.user_id = $${savedCheckParam})` : 'false'} as is_saved
       FROM properties p
       ${where}
       ORDER BY ${orderBy}
       LIMIT $${paramIndex++} OFFSET $${paramIndex++}`,
-      [...params, limit, offset]
+      currentUserId ? [...params, currentUserId, limit, offset] : [...params, limit, offset]
     );
 
     return NextResponse.json({

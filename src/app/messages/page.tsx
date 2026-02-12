@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ConversationCard from "@/components/ConversationCard";
+import Navbar from "@/components/Navbar";
 
 interface Conversation {
   id: number;
@@ -22,17 +24,77 @@ interface Conversation {
   unread_count: number;
 }
 
-export default function MessagesPage() {
+function MessagesContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [userId, setUserId] = useState(0);
+  const [creatingConversation, setCreatingConversation] = useState(false);
 
   useEffect(() => {
-    fetchConversations();
+    // Check for ?to= parameter (redirected from property "Message" button)
+    const toUserId = searchParams.get("to");
+    const propertyId = searchParams.get("property");
+    
+    if (toUserId) {
+      // Create or find conversation with this user
+      createOrFindConversation(toUserId, propertyId);
+    } else {
+      fetchConversations();
+    }
+    
     const interval = setInterval(fetchConversations, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [searchParams]);
+
+  const createOrFindConversation = async (toUserId: string, propertyId: string | null) => {
+    setCreatingConversation(true);
+    try {
+      // First check if conversation exists
+      const res = await fetch("/api/conversations/find", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          otherUserId: parseInt(toUserId),
+          propertyId: propertyId ? parseInt(propertyId) : null
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.conversationId) {
+          // Redirect to the conversation
+          router.replace(`/messages/${data.conversationId}`);
+          return;
+        }
+      }
+
+      // If no conversation found, create a new one
+      const createRes = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          recipient_id: parseInt(toUserId),
+          property_id: propertyId ? parseInt(propertyId) : null
+        }),
+      });
+
+      if (createRes.ok) {
+        const createData = await createRes.json();
+        router.replace(`/messages/${createData.conversation_id}`);
+      } else {
+        // Fall back to showing conversations list
+        await fetchConversations();
+      }
+    } catch (err) {
+      console.error("Failed to create/find conversation:", err);
+      await fetchConversations();
+    } finally {
+      setCreatingConversation(false);
+    }
+  };
 
   const fetchConversations = async () => {
     try {
@@ -69,20 +131,29 @@ export default function MessagesPage() {
     );
   });
 
+  if (creatingConversation) {
+    return (
+      <div className="min-h-screen bg-light">
+        <Navbar />
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mx-auto mb-4" />
+            <p className="text-gray-500">Opening conversation...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-light">
+      <Navbar />
+      
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 sticky top-0 z-40">
+      <div className="bg-white border-b border-gray-100 sticky top-[72px] z-40">
         <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <Link href="/dashboard" className="text-gray-400 hover:text-gray-600 transition">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </Link>
-              <h1 className="text-xl font-black text-dark">Messages</h1>
-            </div>
+            <h1 className="text-xl font-black text-dark">Messages</h1>
             <Link href="/properties" className="text-sm text-primary font-medium hover:text-primary-dark transition">
               Browse Properties
             </Link>
@@ -146,5 +217,20 @@ export default function MessagesPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-light">
+        <Navbar />
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent" />
+        </div>
+      </div>
+    }>
+      <MessagesContent />
+    </Suspense>
   );
 }

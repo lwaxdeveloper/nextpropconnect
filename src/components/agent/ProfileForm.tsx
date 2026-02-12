@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 interface ProfileData {
   user: {
@@ -51,6 +51,50 @@ export default function ProfileForm({ data, onSave }: { data: ProfileData; onSav
   const [saved, setSaved] = useState(false);
   const [areaInput, setAreaInput] = useState("");
   const [specInput, setSpecInput] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState(data.user.avatar_url || "");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      alert("Please select a JPG, PNG, or WebP image");
+      return;
+    }
+
+    // Validate file size (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Image must be under 2MB");
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/upload/avatar", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Upload failed");
+      }
+
+      const { url } = await res.json();
+      setAvatarUrl(url);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to upload avatar");
+    } finally {
+      setUploadingAvatar(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
 
   function toggleArea(area: string) {
     setAreas((prev) => prev.includes(area) ? prev.filter((a) => a !== area) : [...prev, area]);
@@ -90,8 +134,59 @@ export default function ProfileForm({ data, onSave }: { data: ProfileData; onSav
 
   return (
     <div className="space-y-6 max-w-2xl">
+      {/* Profile Picture */}
+      <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 shadow-md">
+        <h3 className="font-bold text-dark mb-4">Profile Picture</h3>
+        <div className="flex items-center gap-6">
+          <div className="relative">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt="Profile"
+                className="w-24 h-24 rounded-full object-cover border-4 border-primary/20"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center border-4 border-primary/20">
+                <svg className="w-10 h-10 text-primary/40" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </svg>
+              </div>
+            )}
+            {uploadingAvatar && (
+              <div className="absolute inset-0 bg-white/80 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+          </div>
+          <div className="flex-1">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleAvatarUpload}
+              className="hidden"
+              id="avatar-upload"
+            />
+            <label
+              htmlFor="avatar-upload"
+              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition ${
+                uploadingAvatar
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-primary text-white hover:bg-primary-dark"
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              {uploadingAvatar ? "Uploading..." : avatarUrl ? "Change Photo" : "Upload Photo"}
+            </label>
+            <p className="text-xs text-gray-400 mt-2">JPG, PNG or WebP. Max 2MB.</p>
+          </div>
+        </div>
+      </div>
+
       {/* Basic Info */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-6">
+      <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 shadow-md">
         <h3 className="font-bold text-dark mb-4">Basic Information</h3>
         <div className="space-y-4">
           <div>
@@ -136,7 +231,7 @@ export default function ProfileForm({ data, onSave }: { data: ProfileData; onSav
       </div>
 
       {/* Areas Served */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-6">
+      <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 shadow-md">
         <h3 className="font-bold text-dark mb-4">Areas Served</h3>
         <div className="flex flex-wrap gap-2 mb-3">
           {allAreas.map((area) => (
@@ -181,7 +276,7 @@ export default function ProfileForm({ data, onSave }: { data: ProfileData; onSav
       </div>
 
       {/* Specializations */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-6">
+      <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 shadow-md">
         <h3 className="font-bold text-dark mb-4">Specializations</h3>
         <div className="flex flex-wrap gap-2 mb-3">
           {allSpecs.map((spec) => (
@@ -216,7 +311,7 @@ export default function ProfileForm({ data, onSave }: { data: ProfileData; onSav
       </div>
 
       {/* Professional Details */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-6">
+      <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 shadow-md">
         <h3 className="font-bold text-dark mb-4">Professional Details</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
@@ -256,7 +351,7 @@ export default function ProfileForm({ data, onSave }: { data: ProfileData; onSav
       </div>
 
       {/* Privacy */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-6">
+      <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 shadow-md">
         <h3 className="font-bold text-dark mb-4">Privacy Settings</h3>
         <div className="space-y-4">
           <label className="flex items-center justify-between cursor-pointer">

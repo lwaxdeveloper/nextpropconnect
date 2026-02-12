@@ -3,6 +3,7 @@ import Footer from "@/components/Footer";
 import PropertyCard from "@/components/PropertyCard";
 import Link from "next/link";
 import { query } from "@/lib/db";
+import { AISearchBar, PropertyRecommendations } from "@/components/ai";
 
 // Fetch featured properties
 async function getFeaturedProperties() {
@@ -34,7 +35,7 @@ export default async function Home() {
         {/* Background with gradient overlay */}
         <div className="absolute inset-0 z-0">
           <div className="w-full h-full bg-gradient-to-br from-primary/90 via-primary/70 to-secondary/80" />
-          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1600596542815-22b4899975d6?auto=format&fit=crop&q=80')] bg-cover bg-center mix-blend-overlay opacity-40" />
+          <div className="absolute inset-0 bg-[url('/images/hero-house-1.jpg')] bg-cover bg-center mix-blend-overlay opacity-40" />
         </div>
 
         {/* Content */}
@@ -46,40 +47,15 @@ export default async function Home() {
             The most trusted way to buy, sell, and rent property. From city apartments to township homes.
           </p>
 
-          {/* Search Box */}
+          {/* AI Search Box */}
           <div className="bg-white p-6 rounded-2xl shadow-2xl max-w-3xl mx-auto">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1 relative">
-                <svg className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <input 
-                  type="text" 
-                  placeholder="City, Suburb, or Area (e.g. Sandton)" 
-                  className="w-full pl-10 h-12 text-base rounded-lg border border-input bg-background px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-              <select className="h-12 w-full md:w-48 rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                <option value="">Property Type</option>
-                <option value="house">House</option>
-                <option value="apartment">Apartment</option>
-                <option value="townhouse">Townhouse</option>
-                <option value="land">Land</option>
-              </select>
-              <Link 
-                href="/properties"
-                className="h-12 px-8 bg-primary text-primary-foreground font-semibold rounded-lg flex items-center justify-center hover:bg-primary/90 transition"
-              >
-                Search
-              </Link>
-            </div>
+            <AISearchBar />
             <div className="flex gap-4 mt-4 justify-center">
-              <Link href="/properties?status=sale" className="text-sm text-muted-foreground hover:text-primary transition">
+              <Link href="/properties?listing_type=sale" className="text-sm text-muted-foreground hover:text-primary transition">
                 Buy
               </Link>
               <span className="text-muted-foreground">|</span>
-              <Link href="/properties?status=rent" className="text-sm text-muted-foreground hover:text-primary transition">
+              <Link href="/properties?listing_type=rent" className="text-sm text-muted-foreground hover:text-primary transition">
                 Rent
               </Link>
               <span className="text-muted-foreground">|</span>
@@ -138,6 +114,9 @@ export default async function Home() {
               View All Listings
             </Link>
           </div>
+
+          {/* AI Recommendations */}
+          <PropertyRecommendations />
         </div>
       </section>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { FunnelChart, BarChart } from "@/components/agent/SimpleChart";
 
 interface Props {
@@ -60,6 +61,35 @@ function formatResponseTime(minutes: number): string {
 }
 
 export default function AnalyticsClient({ leads, listings, totalStats, comparison, responseTime, conversion }: Props) {
+  const [exporting, setExporting] = useState<string | null>(null);
+
+  const handleExport = async (format: "pdf" | "csv", type: string = "overview") => {
+    setExporting(`${format}-${type}`);
+    try {
+      const url = `/api/agent/reports?format=${format}&type=${type}`;
+      if (format === "pdf") {
+        // Open in new window for printing
+        window.open(url, "_blank");
+      } else {
+        // Download CSV
+        const res = await fetch(url);
+        const blob = await res.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.download = `propconnect-${type}-${new Date().toISOString().split("T")[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(downloadUrl);
+      }
+    } catch (err) {
+      console.error("Export failed:", err);
+    } finally {
+      setExporting(null);
+    }
+  };
+
   const conversionRate = conversion.closedCount > 0 
     ? Math.round((conversion.wonCount / conversion.closedCount) * 100) 
     : 0;
@@ -80,6 +110,53 @@ export default function AnalyticsClient({ leads, listings, totalStats, compariso
 
   return (
     <div className="space-y-8">
+      {/* Export Buttons */}
+      <div className="flex flex-wrap gap-3 justify-end">
+        <button
+          onClick={() => handleExport("pdf", "overview")}
+          disabled={exporting !== null}
+          className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-semibold hover:bg-red-600 transition disabled:opacity-50"
+        >
+          {exporting === "pdf-overview" ? (
+            <span className="animate-spin">⏳</span>
+          ) : (
+            <span>📄</span>
+          )}
+          Export PDF
+        </button>
+        <button
+          onClick={() => handleExport("csv", "overview")}
+          disabled={exporting !== null}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition disabled:opacity-50"
+        >
+          {exporting === "csv-overview" ? (
+            <span className="animate-spin">⏳</span>
+          ) : (
+            <span>📊</span>
+          )}
+          Export Excel
+        </button>
+        <div className="relative group">
+          <button className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200 transition">
+            More ▾
+          </button>
+          <div className="absolute right-0 mt-1 w-48 bg-white border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+            <button
+              onClick={() => handleExport("csv", "listings")}
+              className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+            >
+              📋 Listings Report (CSV)
+            </button>
+            <button
+              onClick={() => handleExport("csv", "leads")}
+              className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+            >
+              👥 Leads Report (CSV)
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Performance Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="bg-white rounded-2xl border border-gray-100 p-5">

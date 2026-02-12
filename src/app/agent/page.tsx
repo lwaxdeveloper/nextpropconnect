@@ -123,12 +123,14 @@ export default async function AgentDashboardPage() {
         </div>
 
         {myListingsResult.rows.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
-            <div className="text-4xl mb-3">🏡</div>
-            <h3 className="font-bold text-dark mb-2">No listings yet</h3>
-            <p className="text-sm text-gray-500 mb-4">Start listing properties to grow your business.</p>
-            <Link href="/properties/new" className="inline-block px-6 py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary-dark transition">
-              Create First Listing
+          <div className="bg-white rounded-2xl border-2 border-gray-200 shadow-md p-10 text-center">
+            <div className="w-20 h-20 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <span className="text-4xl">🏡</span>
+            </div>
+            <h3 className="font-bold text-dark text-lg mb-2">No listings yet</h3>
+            <p className="text-sm text-gray-500 mb-6">Ready to list your property? It only takes a few minutes.</p>
+            <Link href="/properties/new" className="inline-block px-8 py-3.5 bg-primary text-white font-bold rounded-xl hover:bg-primary-dark transition shadow-lg shadow-primary/20">
+              Create Your First Listing
             </Link>
           </div>
         ) : (
@@ -137,7 +139,7 @@ export default async function AgentDashboardPage() {
             {myListingsResult.rows.map((p: any) => {
               const daysListed = Math.floor((Date.now() - new Date(p.created_at).getTime()) / (1000 * 60 * 60 * 24));
               return (
-                <div key={p.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-md transition">
+                <div key={p.id} className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden hover:shadow-lg hover:border-primary/30 transition-all">
                   <div className="h-32 bg-gray-100 relative">
                     {p.image_url ? (
                       <img src={p.image_url} alt={p.title} className="w-full h-full object-cover" />
@@ -182,11 +184,14 @@ export default async function AgentDashboardPage() {
         </div>
 
         {conversationsResult.rows.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 p-6 text-center text-sm text-gray-400">
-            No messages yet
+          <div className="bg-white rounded-2xl border-2 border-gray-200 shadow-md p-8 text-center">
+            <div className="w-16 h-16 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl">💬</span>
+            </div>
+            <p className="text-gray-500 font-medium">No messages yet</p>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-50">
+          <div className="bg-white rounded-2xl border-2 border-gray-200 shadow-md divide-y divide-gray-100">
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             {conversationsResult.rows.map((conv: any) => (
               <Link

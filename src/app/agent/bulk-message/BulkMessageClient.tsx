@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Send, Users, CheckCircle, AlertCircle, Filter } from "lucide-react";
+import Link from "next/link";
+import { Send, Users, CheckCircle, AlertCircle, Filter, Plus } from "lucide-react";
 
 interface Lead {
   id: number;
@@ -172,7 +173,14 @@ export default function BulkMessageClient({ leads, templates }: Props) {
         {filteredLeads.length === 0 ? (
           <div className="text-center py-8 text-gray-400">
             <div className="text-4xl mb-2">📱</div>
-            <p>No leads with phone numbers</p>
+            <p className="mb-4">No leads with phone numbers</p>
+            <Link
+              href="/agent/leads/new"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition"
+            >
+              <Plus className="w-4 h-4" />
+              Create Lead
+            </Link>
           </div>
         ) : (
           <div className="space-y-2 max-h-[400px] overflow-y-auto">

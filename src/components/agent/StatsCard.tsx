@@ -16,20 +16,22 @@ export default function StatsCard({ icon, label, value, change, changeType = "ne
   return (
     <Wrapper
       {...wrapperProps}
-      className={`bg-white p-6 rounded-2xl border border-gray-100 shadow-sm ${
-        href ? "hover:border-primary/30 hover:shadow-md transition cursor-pointer" : ""
+      className={`bg-white p-6 rounded-2xl border-2 border-gray-200 shadow-md hover:shadow-lg transition-all ${
+        href ? "hover:border-primary/50 cursor-pointer" : ""
       }`}
     >
       <div className="flex items-center justify-between mb-3">
-        <span className="text-2xl">{icon}</span>
+        <div className="w-12 h-12 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-xl flex items-center justify-center">
+          <span className="text-2xl">{icon}</span>
+        </div>
         {change && (
           <span
             className={`text-xs font-semibold px-2 py-1 rounded-full ${
               changeType === "up"
-                ? "bg-green-50 text-green-600"
+                ? "bg-green-100 text-green-700"
                 : changeType === "down"
-                ? "bg-red-50 text-red-600"
-                : "bg-gray-50 text-gray-500"
+                ? "bg-red-100 text-red-700"
+                : "bg-gray-100 text-gray-600"
             }`}
           >
             {changeType === "up" ? "↑" : changeType === "down" ? "↓" : ""} {change}
@@ -37,7 +39,7 @@ export default function StatsCard({ icon, label, value, change, changeType = "ne
         )}
       </div>
       <div className="text-3xl font-black text-dark">{value}</div>
-      <div className="text-sm text-gray-500 mt-1">{label}</div>
+      <div className="text-sm text-gray-600 mt-1 font-medium">{label}</div>
     </Wrapper>
   );
 }

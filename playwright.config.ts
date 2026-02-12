@@ -16,7 +16,7 @@ export default defineConfig({
   ],
   
   use: {
-    baseURL: process.env.TEST_URL || "https://nextpropconnect.co.za",
+    baseURL: process.env.TEST_URL || "https://nextpropconnect.itedia.co.za",
     trace: "on-first-retry",
     screenshot: "on",
     video: "on-first-retry",

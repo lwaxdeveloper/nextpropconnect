@@ -23,7 +23,7 @@ export default async function BulkMessagePage() {
 
   // Get quick reply templates
   const templatesResult = await query(
-    `SELECT id, name, content FROM quick_replies WHERE user_id = $1 ORDER BY name`,
+    `SELECT id, title as name, content FROM quick_replies WHERE agent_id = $1 ORDER BY title`,
     [userId]
   );
 

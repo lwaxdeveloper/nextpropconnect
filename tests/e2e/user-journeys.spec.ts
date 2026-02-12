@@ -4,12 +4,12 @@ const SCREENSHOT_DIR = "tests/screenshots";
 
 // Test users - all use password: test1234
 const USERS = {
-  admin: "admin@nextpropconnect.co.za",
-  agent: "sarah.m@nextpropconnect.co.za",
-  buyer: "buyer@nextpropconnect.co.za",
-  renter: "renter@nextpropconnect.co.za",
-  seller: "owner@nextpropconnect.co.za", // Private seller
-  landlord: "landlord@nextpropconnect.co.za",
+  admin: "admin@propconnect.co.za",
+  agent: "sarah.m@propconnect.co.za",
+  buyer: "buyer@propconnect.co.za",
+  renter: "renter@propconnect.co.za",
+  seller: "owner@propconnect.co.za", // Private seller
+  landlord: "landlord@propconnect.co.za",
 };
 
 const PASSWORD = "test1234";
@@ -472,5 +472,83 @@ test.describe("9. Mobile Responsive", () => {
     await page.goto("/login");
     await waitForPage(page);
     await screenshot(page, "94-mobile-login");
+  });
+});
+
+// ============================================
+// RENTAL MANAGEMENT (Phase 7)
+// ============================================
+test.describe("10. Rental Management", () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page, USERS.agent); // Use agent user for rentals
+  });
+
+  test("10.1 Rentals dashboard", async ({ page }) => {
+    await page.goto("/agent/rentals");
+    await waitForPageLoad(page);
+    await screenshot(page, "100-rentals-dashboard");
+  });
+
+  test("10.2 Tenants list", async ({ page }) => {
+    await page.goto("/agent/rentals/tenants");
+    await waitForPageLoad(page);
+    await screenshot(page, "101-rentals-tenants");
+  });
+
+  test("10.3 Add tenant form", async ({ page }) => {
+    await page.goto("/agent/rentals/tenants/new");
+    await waitForPageLoad(page);
+    await screenshot(page, "102-rentals-add-tenant");
+  });
+
+  test("10.4 Payments overview", async ({ page }) => {
+    await page.goto("/agent/rentals/payments");
+    await waitForPageLoad(page);
+    await screenshot(page, "103-rentals-payments");
+  });
+
+  test("10.5 Maintenance requests", async ({ page }) => {
+    await page.goto("/agent/rentals/maintenance");
+    await waitForPageLoad(page);
+    await screenshot(page, "104-rentals-maintenance");
+  });
+});
+
+// ============================================
+// TENANT PORTAL (Phase 7)
+// ============================================
+test.describe("11. Tenant Portal", () => {
+  test("11.1 Tenant portal page", async ({ page }) => {
+    await login(page, USERS.renter);
+    await page.goto("/tenant");
+    await waitForPageLoad(page);
+    await screenshot(page, "110-tenant-portal");
+  });
+});
+
+// ============================================
+// REVIEWS & TRUST (Phase 5)
+// ============================================
+test.describe("12. Reviews & Trust", () => {
+  test("12.1 Agent reviews dashboard", async ({ page }) => {
+    await login(page, USERS.agent);
+    await page.goto("/agent/reviews");
+    await waitForPageLoad(page);
+    await screenshot(page, "120-agent-reviews");
+  });
+
+  test("12.2 Leave review for agent", async ({ page }) => {
+    await login(page, USERS.buyer);
+    // Go to an agent profile and look for review option
+    await page.goto("/agents/2");
+    await waitForPageLoad(page);
+    await screenshot(page, "121-leave-review");
+  });
+
+  test("12.3 Admin moderation page", async ({ page }) => {
+    await login(page, USERS.admin);
+    await page.goto("/admin/moderation");
+    await waitForPageLoad(page);
+    await screenshot(page, "122-admin-moderation");
   });
 });

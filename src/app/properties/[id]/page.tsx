@@ -12,6 +12,7 @@ import { formatPrice } from "@/lib/format";
 import ShareButton from "./ShareButton";
 import OwnerContactCard from "./OwnerContactCard";
 import { query } from "@/lib/db";
+import { PropertyJsonLd, BreadcrumbJsonLd } from "@/components/seo/JsonLd";
 
 export const dynamic = "force-dynamic";
 
@@ -87,7 +88,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title: `${p.title} — ${priceStr}`,
       description: `${p.listing_type === "rent" ? "To Rent" : "For Sale"} in ${location}`,
-      url: `https://nextnextpropconnect.co.za/properties/${propertyId}`,
+      url: `https://nextpropconnect.co.za/properties/${propertyId}`,
       siteName: "NextPropConnect SA",
     },
   };
@@ -104,8 +105,35 @@ export default async function PropertyDetailPage({ params }: Props) {
   const { property: p, images, similar } = data;
   const price = Number(p.price);
 
+  const location = [p.suburb, p.city].filter(Boolean).join(", ");
+
   return (
     <main className="min-h-screen bg-light">
+      <PropertyJsonLd
+        property={{
+          id: p.id,
+          title: p.title,
+          description: p.description || "",
+          price: price,
+          property_type: p.property_type,
+          listing_type: p.listing_type,
+          bedrooms: p.bedrooms,
+          bathrooms: p.bathrooms,
+          size_sqm: p.size_sqm,
+          location: location,
+          images: images.map((img: any) => img.url),
+          agent_name: p.agent_name || p.user_name,
+          created_at: p.created_at,
+          updated_at: p.updated_at,
+        }}
+      />
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Home", url: "https://nextpropconnect.co.za" },
+          { name: "Properties", url: "https://nextpropconnect.co.za/properties" },
+          { name: p.title, url: `https://nextpropconnect.co.za/properties/${p.id}` },
+        ]}
+      />
       <Navbar />
       <div className="pt-20 pb-12">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">

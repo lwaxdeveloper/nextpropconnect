@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import NotificationItem from "@/components/NotificationItem";
+import Navbar from "@/components/Navbar";
 
 interface Notification {
   id: number;
@@ -76,16 +77,13 @@ export default function NotificationsPage() {
 
   return (
     <div className="min-h-screen bg-light">
+      <Navbar />
+      
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 sticky top-0 z-40">
+      <div className="bg-white border-b border-gray-100 sticky top-[72px] z-40">
         <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <Link href="/dashboard" className="text-gray-400 hover:text-gray-600 transition">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </Link>
               <h1 className="text-xl font-black text-dark">Notifications</h1>
               {unreadCount > 0 && (
                 <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full">
