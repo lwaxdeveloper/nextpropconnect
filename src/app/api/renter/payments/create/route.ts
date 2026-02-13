@@ -68,6 +68,16 @@ export async function POST(request: NextRequest) {
     // Note: amount is in Rands, createPaymentUrl expects cents
     const amountInCents = Math.round(amount * 100);
     
+    console.log("[Rent Payment] ========================================");
+    console.log("[Rent Payment] Creating Ozow payment request");
+    console.log("[Rent Payment] User email:", user.email);
+    console.log("[Rent Payment] Amount (Rands):", amount);
+    console.log("[Rent Payment] Amount (cents):", amountInCents);
+    console.log("[Rent Payment] Transaction ref:", transactionRef);
+    console.log("[Rent Payment] BASE_URL:", BASE_URL);
+    console.log("[Rent Payment] isOzowConfigured:", isOzowConfigured());
+    console.log("[Rent Payment] ========================================");
+    
     const paymentUrl = createPaymentUrl({
       transactionReference: transactionRef,
       amount: amountInCents,
@@ -80,6 +90,7 @@ export async function POST(request: NextRequest) {
     });
 
     console.log(`[Rent Payment] Created payment ${paymentId} for tenant ${tenant.id}, amount: R${amount}`);
+    console.log(`[Rent Payment] Ozow URL generated, length: ${paymentUrl.length}`);
 
     return NextResponse.json({ 
       redirectUrl: paymentUrl, 

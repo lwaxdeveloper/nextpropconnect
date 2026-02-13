@@ -49,11 +49,13 @@ export function isOzowConfigured(): boolean {
 
 /**
  * Generate Ozow payment hash
+ * NOTE: Input should NOT be lowercased - Ozow expects original case
+ * Only the final hash comparison is case-insensitive
  */
 function generateHash(data: string): string {
   return crypto
     .createHash("sha512")
-    .update(data.toLowerCase())
+    .update(data)
     .digest("hex");
 }
 
@@ -76,25 +78,56 @@ export function createPaymentUrl(request: OzowPaymentRequest): string {
   // Amount in Rands (Ozow expects decimal)
   const amountStr = (amount / 100).toFixed(2);
 
+  // EXTREME LOGGING - Debug Ozow issues
+  console.log("=".repeat(80));
+  console.log("[Ozow] PAYMENT REQUEST DEBUG");
+  console.log("=".repeat(80));
+  console.log("[Ozow] Environment:");
+  console.log("  OZOW_SITE_CODE:", OZOW_SITE_CODE ? `${OZOW_SITE_CODE.substring(0, 8)}...` : "NOT SET");
+  console.log("  OZOW_PRIVATE_KEY:", OZOW_PRIVATE_KEY ? `${OZOW_PRIVATE_KEY.length} chars` : "NOT SET");
+  console.log("  OZOW_TEST_MODE:", OZOW_TEST_MODE);
+  console.log("  isTest param:", isTest);
+  console.log("[Ozow] Request params:");
+  console.log("  transactionReference:", transactionReference);
+  console.log("  amount (cents):", amount);
+  console.log("  amountStr (Rands):", amountStr);
+  console.log("  bankReference:", bankReference);
+  console.log("  customer:", customer);
+  console.log("  cancelUrl:", cancelUrl);
+  console.log("  errorUrl:", errorUrl);
+  console.log("  successUrl:", successUrl);
+  console.log("  notifyUrl:", notifyUrl);
+
   // Generate hash
-  // SiteCode + CountryCode + CurrencyCode + Amount + TransactionReference + BankReference + Optional + CancelUrl + ErrorUrl + SuccessUrl + NotifyUrl + IsTest + PrivateKey
-  const hashInput = [
+  // According to Ozow docs: SiteCode + CountryCode + CurrencyCode + Amount + TransactionReference + BankReference + CancelUrl + ErrorUrl + SuccessUrl + NotifyUrl + IsTest + PrivateKey
+  // Note: Customer/Optional fields are NOT included in hash
+  const hashInputArray = [
     OZOW_SITE_CODE,
     "ZA",
     "ZAR",
     amountStr,
     transactionReference,
     bankReference,
-    customer || "",
     cancelUrl,
     errorUrl,
     successUrl,
     notifyUrl,
     isTest ? "true" : "false",
     OZOW_PRIVATE_KEY,
-  ].join("");
-
+  ];
+  
+  console.log("[Ozow] Hash input array (without private key):");
+  hashInputArray.slice(0, -1).forEach((val, i) => {
+    console.log(`  [${i}]: "${val}"`);
+  });
+  console.log(`  [11]: [PRIVATE_KEY - ${OZOW_PRIVATE_KEY.length} chars]`);
+  
+  const hashInput = hashInputArray.join("");
+  console.log("[Ozow] Hash input string length:", hashInput.length);
+  console.log("[Ozow] Hash input (redacted):", hashInput.replace(OZOW_PRIVATE_KEY, "[PRIVATE_KEY]"));
+  
   const hashCheck = generateHash(hashInput);
+  console.log("[Ozow] Generated hash:", hashCheck);
 
   // Build payment URL
   const params = new URLSearchParams({
@@ -113,7 +146,11 @@ export function createPaymentUrl(request: OzowPaymentRequest): string {
     HashCheck: hashCheck,
   });
 
-  return `${OZOW_PAY_URL}?${params.toString()}`;
+  const fullUrl = `${OZOW_PAY_URL}?${params.toString()}`;
+  console.log("[Ozow] Full payment URL:", fullUrl);
+  console.log("=".repeat(80));
+
+  return fullUrl;
 }
 
 /**

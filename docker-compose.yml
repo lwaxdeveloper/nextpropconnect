@@ -21,7 +21,7 @@ services:
       - OZOW_SITE_CODE=${OZOW_SITE_CODE}
       - OZOW_PRIVATE_KEY=${OZOW_PRIVATE_KEY}
       - OZOW_API_KEY=${OZOW_API_KEY}
-      - OZOW_TEST_MODE=${OZOW_TEST_MODE:-false}
+      - OZOW_TEST_MODE=${OZOW_TEST_MODE:-true}
       # MsgHub Configuration (centralized messaging)
       - MSGHUB_URL=https://messaging.itedia.co.za
       - MSGHUB_API_KEY=mh_gGswkMdesqHOcIC7Y-qERhF2EVM0CMiPqXnXTdMXsWI
